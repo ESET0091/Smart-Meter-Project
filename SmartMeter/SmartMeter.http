@@ -1,0 +1,6 @@
+@SmartMeter_HostAddress = http://localhost:5153
+
+GET {{SmartMeter_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
