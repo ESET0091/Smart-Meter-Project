@@ -169,172 +169,42 @@ namespace SmartMeter.Services
             _logger = logger;
         }
 
-        //public async Task<BillResponseDto> GenerateBillAsync(GenerateBillDto request)
-        //{
-        //    _logger.LogInformation("Generating bill for consumer {ConsumerId} and meter {MeterSerialNo}",
-        //        request.ConsumerId, request.MeterSerialNo);
-
-        //    // 1. Validate consumer exists
-        //    var consumer = await _context.Consumers
-        //        .Include(c => c.AidNavigation) // Include Address
-        //        .FirstOrDefaultAsync(c => c.Consumerid == request.ConsumerId);
-
-        //    if (consumer == null)
-        //        throw new ArgumentException($"Consumer with ID {request.ConsumerId} not found");
-
-        //    // 2. Validate meter exists and belongs to consumer
-        //    var meter = await _context.Meters
-        //        .FirstOrDefaultAsync(m => m.Meterserialno == request.MeterSerialNo && m.Consumerid == request.ConsumerId);
-
-        //    if (meter == null)
-        //        throw new ArgumentException($"Meter with serial number {request.MeterSerialNo} not found for consumer {request.ConsumerId}");
-
-        //    // 3. Get previous reading
-        //    DateTime BillingPreiodSt = DateTime.SpecifyKind(
-        //        DateOnly.Parse(request.BillingPeriodStart).ToDateTime(TimeOnly.MinValue),
-        //        DateTimeKind.Utc);
-        //   // var previousReading = await GetPreviousReading(request.MeterSerialNo, DateOnly.Parse(request.BillingPeriodStart));
-        //    var previousReading = await GetPreviousReading(request.MeterSerialNo, BillingPreiodSt);
-
-        //   // 4.Calculate units consumed
-        //    var unitsConsumed = request.CurrentReading - previousReading;
-        //    if (unitsConsumed < 0)
-        //        throw new ArgumentException("Current reading cannot be less than previous reading");
-
-
-        //    // 5. Create billing record
-        //    var billing = new Billing
-        //    {
-        //        Consumerid = request.ConsumerId,
-        //        Meterid = request.MeterSerialNo,
-        //        //Billingperiodstart = DateOnly.Parse(request.BillingPeriodStart),
-        //        Billingperiodstart = DateTime.SpecifyKind(
-        //        DateOnly.Parse(request.BillingPeriodStart).ToDateTime(TimeOnly.MinValue),
-        //        DateTimeKind.Utc),
-        //        Billingperiodend = DateTime.SpecifyKind(
-        //        DateOnly.Parse(request.BillingPeriodEnd).ToDateTime(TimeOnly.MinValue),
-        //        DateTimeKind.Utc),
-        //        //Billingperiodstart = DateTime.UtcNow,
-        //        //Billingperiodend= DateTime.UtcNow,
-        //        //Totalunitsconsumed = unitsConsumed,
-        //        Totalunitsconsumed = 1680,
-        //        Baseamount = 0, 
-        //        Taxamount = 0,  
-        //        Totalamount = 0, 
-        //        Generatedat = DateTime.UtcNow,
-        //        Paiddate = DateTime.UtcNow,
-        //        //Duedate = new DateOnly(2025, 01, 31), // Due date 15 days after billing period
-        //        Duedate = DateTime.SpecifyKind(
-        //        DateOnly.Parse(request.BillingPeriodEnd).ToDateTime(TimeOnly.MinValue),
-        //        DateTimeKind.Utc).AddDays(15),
-        //        //Duedate = DateTime.UtcNow,
-        //        Paymentstatus = "Unpaid"
-        //    };
-
-        //    //Console.WriteLine($"BillingPeriodStart is: {DateTime.SpecifyKind(
-        //    //    DateOnly.Parse(request.BillingPeriodStart).ToDateTime(TimeOnly.MinValue),
-        //    //    DateTimeKind.Utc)}");
-
-        //    try
-        //    {
-        //        _context.Billings.Add(billing);
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        Console.WriteLine(ex.ToString());
-        //    }
-
-
-
-        //    _logger.LogInformation("Basic bill generated successfully with ID: {BillId}", billing.Billid);
-
-        //    // 6. Return response
-        //    return await MapToBillResponseDto(billing);
-        //}
-
-
-        /*
-        public async Task<BillResponseDto> GenerateBillAsync(GenerateBillDto request)
+        // Get bills by consumer ID and date range
+        public async Task<List<BillResponseDto>> GetConsumerBillsByDateRangeAsync(long consumerId, DateTime fromDate, DateTime toDate)
         {
-            _logger.LogInformation("Generating bill for consumer {ConsumerId} and meter {MeterSerialNo}",
-                request.ConsumerId, request.MeterSerialNo);
+            _logger.LogInformation("Retrieving bills for consumer {ConsumerId} from {FromDate} to {ToDate}",
+                consumerId, fromDate, toDate);
 
-            // 1. Validate consumer exists WITH TARIFF
-            var consumer = await _context.Consumers
-                .Include(c => c.AidNavigation)
-                .Include(c => c.Tariff)  // ADD THIS LINE
-                    .ThenInclude(t => t.Tariffslabs)  // ADD THIS LINE
-                .FirstOrDefaultAsync(c => c.Consumerid == request.ConsumerId);
+            // Validate consumer exists
+            var consumerExists = await _context.Consumers
+                .AnyAsync(c => c.Consumerid == consumerId);
 
-            if (consumer == null)
-                throw new ArgumentException($"Consumer with ID {request.ConsumerId} not found");
+            if (!consumerExists)
+                throw new ArgumentException($"Consumer with ID {consumerId} not found");
 
-            // 2. Validate meter exists and belongs to consumer
-            var meter = await _context.Meters
-                .FirstOrDefaultAsync(m => m.Meterserialno == request.MeterSerialNo && m.Consumerid == request.ConsumerId);
+            // Get bills within the date range
+            var bills = await _context.Billings
+                .Include(b => b.Consumer)
+                    .ThenInclude(c => c.AidNavigation)
+                .Include(b => b.Meter)
+                .Where(b => b.Consumerid == consumerId &&
+                           b.Generatedat >= fromDate &&
+                           b.Generatedat <= toDate)
+                .OrderByDescending(b => b.Generatedat) // Newest bills first
+                .ToListAsync();
 
-            if (meter == null)
-                throw new ArgumentException($"Meter with serial number {request.MeterSerialNo} not found for consumer {request.ConsumerId}");
+            _logger.LogInformation("Found {Count} bills for consumer {ConsumerId} in the specified date range",
+                bills.Count, consumerId);
 
-            // 3. Get previous reading
-            DateTime BillingPeriodSt = DateTime.SpecifyKind(
-                DateOnly.Parse(request.BillingPeriodStart).ToDateTime(TimeOnly.MinValue),
-                DateTimeKind.Utc);
-            var previousReading = await GetPreviousReading(request.MeterSerialNo, BillingPeriodSt);
-
-            // 4. Calculate units consumed
-            var unitsConsumed = request.CurrentReading - previousReading;
-            if (unitsConsumed < 0)
-                throw new ArgumentException("Current reading cannot be less than previous reading");
-
-            // 5. CALCULATE CHARGES USING TARIFF (NEW CODE)
-            var (baseAmount, taxAmount, totalAmount) = await CalculateCharges(unitsConsumed, consumer.Tariffid);
-
-            // 6. Create billing record WITH CALCULATED VALUES
-            var billing = new Billing
+            // Convert to DTOs
+            var billDtos = new List<BillResponseDto>();
+            foreach (var bill in bills)
             {
-                Consumerid = request.ConsumerId,
-                Meterid = request.MeterSerialNo,
-                Billingperiodstart = DateTime.SpecifyKind(
-                    DateOnly.Parse(request.BillingPeriodStart).ToDateTime(TimeOnly.MinValue),
-                    DateTimeKind.Utc),
-                Billingperiodend = DateTime.SpecifyKind(
-                    DateOnly.Parse(request.BillingPeriodEnd).ToDateTime(TimeOnly.MinValue),
-                    DateTimeKind.Utc),
-                Totalunitsconsumed = unitsConsumed,  
-                Baseamount = baseAmount,             
-                Taxamount = taxAmount,               
-                Totalamount = totalAmount,           
-                Generatedat = DateTime.UtcNow,
-                Paiddate = null,                     
-                Duedate = DateTime.SpecifyKind(
-                    DateOnly.Parse(request.BillingPeriodEnd).ToDateTime(TimeOnly.MinValue),
-                    DateTimeKind.Utc).AddDays(15),
-                Paymentstatus = "Unpaid"
-            };
-
-            try
-            {
-                _context.Billings.Add(billing);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-                throw; // Re-throw the exception after logging
+                billDtos.Add(await MapToBillResponseDto(bill));
             }
 
-            _logger.LogInformation("Bill generated successfully: {Units} units, ₹{Amount}",
-                unitsConsumed, totalAmount);
-
-            // 7. Return response
-            return await MapToBillResponseDto(billing);
+            return billDtos;
         }
-
-        */
-
-
 
 
 
@@ -456,25 +326,7 @@ namespace SmartMeter.Services
             return await MapToBillResponseDto(billing);
         }
 
-        //private async Task<decimal> GetPreviousReading(string meterSerialNo, DateTime billingPeriodStart)
-        //{
-        //    // Get the last reading before the billing period start
-        //    //var previousReadingRecord = await _context.Meterreadings
-        //    //    .Where(mr => mr.Meterid == meterSerialNo &&
-        //    //               mr.Meterreadingdate < billingPeriodStart.ToDateTime(TimeOnly.MinValue))
-        //    //    .OrderByDescending(mr => mr.Meterreadingdate)
-        //    //    .FirstOrDefaultAsync();
-
-        //    var previousReadingRecord = await _context.Meterreadings
-        //        .Where(mr => mr.Meterid == meterSerialNo &&
-        //                   mr.Meterreadingdate < billingPeriodStart)
-        //        .OrderByDescending(mr => mr.Meterreadingdate)
-        //        .FirstOrDefaultAsync();
-
-
-        //    return previousReadingRecord?.Energyconsumed ?? 0;
-        //}
-
+       
 
         // 🔄 CHANGE THIS METHOD - Replace your existing GetPreviousReading method
         private async Task<(decimal previousReading, decimal currentReading, DateTime? currentReadingDate)> GetReadingsForBillingPeriod(string meterSerialNo, DateTime billingPeriodStart, DateTime billingPeriodEnd)
@@ -543,24 +395,6 @@ namespace SmartMeter.Services
 
 
 
-        // Method 1: Pay Bill
-        //public async Task<bool> PayBillAsync(PayBillDto request)
-        //{
-        //    var billing = await _context.Billings.FindAsync(request.BillId);
-        //    if (billing == null) return false;
-
-        //    if (billing.Paymentstatus == "Paid")
-        //        throw new InvalidOperationException("Bill is already paid");
-
-        //    // Update billing status
-        //    billing.Paymentstatus = "Paid";
-        //    billing.Paiddate = DateTime.UtcNow;
-
-        //    await _context.SaveChangesAsync();
-
-        //    _logger.LogInformation("Bill {BillId} paid successfully", request.BillId);
-        //    return true;
-        //}
 
 
 

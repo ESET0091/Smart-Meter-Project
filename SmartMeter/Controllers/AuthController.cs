@@ -1,10 +1,4 @@
-﻿//namespace SmartMeter.Controllers
-//{
-//    public class AuthController
-//    {
-//    }
-//}
-
+﻿
 
 using SmartMeter.Models;
 using SmartMeter.Models.DTOs;
@@ -43,13 +37,20 @@ namespace SmartMeter.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<TokenResponseDto>> Login(UserDto request)
         {
-            var token = await service.LoginAsync(request);
-            if (token is null)
+            try
             {
-                return BadRequest("Username/password is wrong");
+                var token = await service.LoginAsync(request);
+                if (token is null)
+                {
+                    return BadRequest("Username/password is wrong");
+                }
+                return Ok(token);
             }
-            return Ok(token);
-
+            catch (ApplicationException ex)
+            {
+                // This will catch the lockout message
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("refresh-token")]

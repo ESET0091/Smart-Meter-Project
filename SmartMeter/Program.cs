@@ -1,12 +1,14 @@
 
-using SmartMeter.Services;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using SmartMeter.Data;
-using System.Text;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SmartMeter.Data;
+using SmartMeter.Services;
+using SmartMeter.Services.Implementation;
+using SmartMeter.Services.Interface;
 
 namespace SmartMeter
 {
@@ -31,6 +33,11 @@ namespace SmartMeter
             // Add these services
             builder.Services.AddScoped<IConsumerPhotoService, ConsumerPhotoService>();
             builder.Services.AddScoped<IBillService, BillService>();
+
+            //my
+            builder.Services.AddScoped<IEnergyConsumptionService, EnergyConsumptionService>();
+            builder.Services.AddScoped<IBillingParametersService, BillingParametersService>(); 
+
 
             // Configure file upload limits
             builder.Services.Configure<IISServerOptions>(options =>
@@ -100,17 +107,12 @@ namespace SmartMeter
             // Add static files middleware
             app.UseStaticFiles();
 
-            // Serve consumer uploads
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(builder.Environment.WebRootPath, "uploads", "consumers")),
-                RequestPath = "/uploads/consumers"
-            });
-
+           
             app.MapControllers();
 
             app.Run();
+
+
         }
     }
 }

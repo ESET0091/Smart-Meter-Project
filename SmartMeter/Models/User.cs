@@ -27,5 +27,13 @@ public partial class User
     public DateTime RefreshTokenExpiry { get; set; } = DateTime.UtcNow;
 
 
+    public int FailedLoginAttempts { get; set; }
+
+    public DateTime? LockoutEndTime { get; set; }  = DateTime.UtcNow;
+
+
+
+
+
 
 }
