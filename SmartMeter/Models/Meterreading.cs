@@ -18,4 +18,7 @@ public partial class Meterreading
     public decimal Current { get; set; }
 
     public virtual Meter Meter { get; set; } = null!;
+
+    public decimal Powerfactor { get; set; } = 0.85m; // Add this line
+
 }

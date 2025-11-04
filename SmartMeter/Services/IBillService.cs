@@ -12,6 +12,8 @@ namespace SmartMeter.Services
         //Task<bool> PayBillAsync(PayBillDto request);
         Task<PaymentResponseDto?> PayBillAsync(PayBillDto request);
         Task<List<BillResponseDto>> GetPendingBillsAsync();
+
+        Task<List<BillResponseDto>> GetConsumerBillsByDateRangeAsync(long consumerId, DateTime fromDate, DateTime toDate);
     }
 
     // ADD THIS DTO CLASS (add it in the same file):

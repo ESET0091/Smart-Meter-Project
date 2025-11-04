@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SmartMeter.Data;
@@ -11,9 +12,11 @@ using SmartMeter.Data;
 namespace SmartMeter.Migrations
 {
     [DbContext(typeof(SmartMeterDbContext))]
-    partial class SmartMeterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251103163932_PowerFactorToMeterreadings")]
+    partial class PowerFactorToMeterreadings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -632,11 +635,6 @@ namespace SmartMeter.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("email");
 
-                    b.Property<int>("FailedLoginAttempts")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.Property<bool>("Isactive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -646,9 +644,6 @@ namespace SmartMeter.Migrations
                     b.Property<DateTime?>("Lastloginutc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("lastloginutc");
-
-                    b.Property<DateTime?>("LockoutEndTime")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<byte[]>("Passwordhash")
                         .IsRequired()

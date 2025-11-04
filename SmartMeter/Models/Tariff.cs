@@ -9,9 +9,9 @@ public partial class Tariff
 
     public string Name { get; set; } = null!;
 
-    public DateOnly Effectivefrom { get; set; }
+    public DateTime Effectivefrom { get; set; } = DateTime.UtcNow;
 
-    public DateOnly? Effectiveto { get; set; }
+    public DateTime Effectiveto { get; set; } = DateTime.UtcNow;
 
     public decimal Baserate { get; set; }
 
